@@ -39,6 +39,10 @@ if "memory" not in st.session_state:
 OPEN_AI_API_KEY = st.text_input("Enter OpenAI API Key", type="password")
 address = st.text_input("Enter an Address")
 
+# Reset Button
+if st.button("Reset Page"):
+    st.experimental_rerun()
+
 # Load or create the vector index
 if OPEN_AI_API_KEY and address:
     HERE_API_KEY = st.secrets["HERE_API"]
