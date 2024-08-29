@@ -2,3 +2,5 @@ llama_index-llms-openai
 langchain-openai 
 streamlit 
 openai
+folium
+streamlit_folium
