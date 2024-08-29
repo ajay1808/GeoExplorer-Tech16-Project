@@ -42,8 +42,7 @@ OPEN_AI_API_KEY = st.text_input("Enter OpenAI API Key", type="password")
 address = st.text_input("Enter an Address")
 
 # Reset Button
-if st.button("Reset Page"):
-    st.experimental_rerun()
+st.markdown("Reload page to reset answers")
 
 # Load or create the vector index
 if OPEN_AI_API_KEY and address:
