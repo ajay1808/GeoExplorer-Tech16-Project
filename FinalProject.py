@@ -6,8 +6,8 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core.tools import FunctionTool
 from llama_index.core.agent import ReActAgent
 import os
-import folium
-from streamlit_folium import st_folium
+# import folium
+# from streamlit_folium import st_folium
 
 # Streamlit Title
 st.title("Geo Explorer β 🌍")
