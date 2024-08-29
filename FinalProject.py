@@ -8,11 +8,10 @@ from llama_index.core.agent import ReActAgent
 import os
 
 # Streamlit Title
-st.title("Geo Explorer β")
+st.title("Geo Explorer β 🌍")
 
 # Introduction Section
 st.markdown("""
-### Welcome to Geo Explorer β 🌍
 **Discover the details behind any address with just a few clicks.**
 
 Enter an address to start. The app will use the HERE API to gather geographic information about the location. Then, simply ask a question—whether it's about nearby spots or neighborhood characteristics—and our Agent will fetch the relevant details for you.
