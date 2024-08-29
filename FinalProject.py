@@ -6,7 +6,6 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core.tools import FunctionTool
 from llama_index.core.agent import ReActAgent
 import os
-from st_audiorec import st_audiorec
 
 # Streamlit Title
 st.title("Geo Explorer β")
@@ -27,7 +26,7 @@ address = st.text_input("Enter US Address")
 
 # Load or create the vector index
 if OPEN_AI_API_KEY and address:
-    HERE_API_KEY = "mZn2jGdOpWjd76Mu_JtOEpU5XsNm2nSvJMrKwxSb9yk"
+    HERE_API_KEY = st.secrets("HERE_API")
 
     os.environ["OPENAI_API_KEY"] = OPEN_AI_API_KEY
 
