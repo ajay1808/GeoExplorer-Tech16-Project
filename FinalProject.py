@@ -125,6 +125,7 @@ if st.session_state.agent:
         full_prompt = (
             "You are an assistant. Always use the tools provided to answer the question. "
             "If the tools do not give you the answer, respond that you do not have the information to answer the question.\n\n"
+            "Think for the right term to use in the API and make sure the answer you are about to give makes sense"
             f"Memory:\n{memory_input}\n\n"
             f"This is the given address: {address}, answer this question: {prompt}"
         )
