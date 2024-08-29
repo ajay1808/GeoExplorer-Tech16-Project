@@ -6,6 +6,8 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core.tools import FunctionTool
 from llama_index.core.agent import ReActAgent
 import os
+import folium
+from streamlit_folium import st_folium
 
 # Streamlit Title
 st.title("Geo Explorer β 🌍")
@@ -96,7 +98,7 @@ if OPEN_AI_API_KEY and address:
                 icon=folium.Icon(color='blue')
             ).add_to(m)
         
-        return m
+        st_folium(map_object, width=700, height=500)
 
     geocoding = FunctionTool.from_defaults(fn=get_geocode_data_tool)
     discover_nearby_places = FunctionTool.from_defaults(fn=discover_nearby_tool)
