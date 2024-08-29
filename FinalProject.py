@@ -10,6 +10,22 @@ import os
 # Streamlit Title
 st.title("Geo Explorer β")
 
+# Introduction Section
+st.markdown("""
+### Welcome to Geo Explorer β 🌍
+**Discover the details behind any address with just a few clicks.**
+
+Enter an address to start. The app will use the HERE API to gather geographic information about the location. Then, simply ask a question—whether it's about nearby spots or neighborhood characteristics—and our Agent will fetch the relevant details for you.
+
+With built-in memory, Geo Explorer β keeps track of your queries, making your exploration smoother and more intuitive.
+
+---
+
+Before you get started, you'll need an OpenAI API key. If you don't have one, you can sign up [here](https://platform.openai.com/api-keys).
+
+""")
+
+
 # Initialize Session State for messages, agent, and memory
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -22,7 +38,7 @@ if "memory" not in st.session_state:
 
 # Input for API Keys and Address
 OPEN_AI_API_KEY = st.text_input("Enter OpenAI API Key", type="password")
-address = st.text_input("Enter US Address")
+address = st.text_input("Enter an Address")
 
 # Load or create the vector index
 if OPEN_AI_API_KEY and address:
