@@ -6,6 +6,13 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core.tools import FunctionTool
 from llama_index.core.agent import ReActAgent
 import os
+from streamlit.server.server import Server
+
+def refresh():
+    Server.get_current()._reloader.reload()
+
+if st.button('Refresh'):
+    refresh()
 
 # Streamlit Title
 st.title("Geo Explorer β")
