@@ -1,0 +1,7 @@
+llama_index-llms-openai 
+crewai 
+langchain-openai 
+streamlit 
+openai 
+'crewai[tools]'
+duckduckgo-search
