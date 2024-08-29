@@ -26,7 +26,7 @@ address = st.text_input("Enter US Address")
 
 # Load or create the vector index
 if OPEN_AI_API_KEY and address:
-    HERE_API_KEY = st.secrets("HERE_API")
+    HERE_API_KEY = st.secrets["HERE_API"]
 
     os.environ["OPENAI_API_KEY"] = OPEN_AI_API_KEY
 
