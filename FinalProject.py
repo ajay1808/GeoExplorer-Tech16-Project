@@ -76,37 +76,37 @@ if OPEN_AI_API_KEY and address:
             return {"error": f"Error: {response.status_code}"}
 
 
-    # Example function to generate a Folium map with multiple markers
-    def generate_map(locations: list):
-        """Locations is a list that takes in a dictionary for each entry with lat,
-        long and location name keys, the first location is always the Given address"""
-        # Initialize a Folium map centered on the first location
-        m = folium.Map(location=[locations[0]["latitude"], locations[0]["longitude"]], zoom_start=12)
+    # # Example function to generate a Folium map with multiple markers
+    # def generate_map(locations: list):
+    #     """Locations is a list that takes in a dictionary for each entry with lat,
+    #     long and location name keys, the first location is always the Given address"""
+    #     # Initialize a Folium map centered on the first location
+    #     m = folium.Map(location=[locations[0]["latitude"], locations[0]["longitude"]], zoom_start=12)
         
-        # Add a marker for the first location in red
-        folium.Marker(
-            [locations[0]["latitude"], locations[0]["longitude"]],
-            tooltip=locations[0]["location_name"],
-            icon=folium.Icon(color='red')
-        ).add_to(m)
+    #     # Add a marker for the first location in red
+    #     folium.Marker(
+    #         [locations[0]["latitude"], locations[0]["longitude"]],
+    #         tooltip=locations[0]["location_name"],
+    #         icon=folium.Icon(color='red')
+    #     ).add_to(m)
     
-        # Add markers for the remaining locations in blue
-        for loc in locations[1:]:
-            folium.Marker(
-                [loc["latitude"], loc["longitude"]],
-                tooltip=loc["location_name"],
-                icon=folium.Icon(color='blue')
-            ).add_to(m)
+    #     # Add markers for the remaining locations in blue
+    #     for loc in locations[1:]:
+    #         folium.Marker(
+    #             [loc["latitude"], loc["longitude"]],
+    #             tooltip=loc["location_name"],
+    #             icon=folium.Icon(color='blue')
+    #         ).add_to(m)
         
-        st_folium(map_object, width=700, height=500)
+    #     st_folium(map_object, width=700, height=500)
 
     geocoding = FunctionTool.from_defaults(fn=get_geocode_data_tool)
     discover_nearby_places = FunctionTool.from_defaults(fn=discover_nearby_tool)
-    map_maker = FunctionTool.from_defaults(fn=generate_map)
+    # map_maker = FunctionTool.from_defaults(fn=generate_map)
 
     # Initialize LLM and ReAct agent with memory
     llm = OpenAI(model="gpt-4o-mini", temperature = 0.2)
-    agent = ReActAgent.from_tools([geocoding, discover_nearby_places,generate_map], llm=llm, verbose=True)
+    agent = ReActAgent.from_tools([geocoding, discover_nearby_places], llm=llm, verbose=True)
     
     st.session_state.agent = agent
 
@@ -126,7 +126,6 @@ if st.session_state.agent:
         full_prompt = (
             "You are an assistant. Always use the tools provided to answer the question. "
             "If the tools do not give you the answer, respond that you do not have the information to answer the question.\n\n"
-            "Generate a map whenever relevant"
             f"Memory:\n{memory_input}\n\n"
             f"This is the given address: {address}, answer this question: {prompt}"
         )
