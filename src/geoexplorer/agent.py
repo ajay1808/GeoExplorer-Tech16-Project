@@ -35,10 +35,10 @@ from llama_index.core.agent.workflow import (
 )
 from llama_index.core.memory import Memory
 from llama_index.core.workflow import Context
-from llama_index.llms.openai import OpenAI
 
 from .here import HereClient
 from .models import GeocodeResult
+from .providers import Provider
 from .state import Anchor, MapSnapshot, SessionState
 from .tools import build_tools
 
@@ -93,6 +93,7 @@ class AgentSession:
         memory: Memory,
         client: HereClient,
         state: SessionState,
+        provider: Provider,
         model: str,
     ) -> None:
         self.agent = agent
@@ -100,6 +101,7 @@ class AgentSession:
         self.memory = memory
         self.client = client
         self.state = state
+        self.provider = provider
         self.model = model
         self.tool_calls = 0
 
@@ -125,7 +127,7 @@ class AgentSession:
                 asyncio.run(self._pump(user_message, events))
             except Exception as exc:
                 logger.exception("Agent turn failed")
-                events.put(StreamEvent(kind="error", text=_humanise_error(exc)))
+                events.put(StreamEvent(kind="error", text=humanise_error(exc)))
             finally:
                 events.put(None)
 
@@ -177,19 +179,19 @@ class AgentSession:
 def build_session(
     *,
     here_client: HereClient,
-    openai_api_key: str,
+    provider: Provider,
+    api_key: str,
     model: str,
     geocode: GeocodeResult,
 ) -> AgentSession:
-    """Create a session anchored on an already-resolved address."""
-    llm = OpenAI(
-        model=model,
-        api_key=openai_api_key,
-        temperature=0.1,
-        # A stalled tool-calling loop should fail fast rather than hang the UI.
-        timeout=60.0,
-        max_retries=2,
-    )
+    """Create a session anchored on an already-resolved address.
+
+    The provider decides which SDK backs the agent; nothing below this line differs
+    between OpenAI, Anthropic and Gemini. Note that the Gemini client validates its
+    key during construction, so an invalid key surfaces here rather than on the first
+    message — callers should be ready to catch it.
+    """
+    llm = provider.build_llm(model, api_key)
     state = SessionState(Anchor.from_geocode(geocode))
     agent = FunctionAgent(
         name="GeoExplorer",
@@ -206,6 +208,7 @@ def build_session(
         ),
         client=here_client,
         state=state,
+        provider=provider,
         model=model,
     )
 
@@ -226,19 +229,41 @@ def _summarise_tool_output(tool_output: Any) -> Any:
     return str(raw)[:400]
 
 
-def _humanise_error(exc: Exception) -> str:
+# Matched against the lowered exception text. Ordered: the first match wins, so the
+# more specific patterns come first. Phrasing is deliberately vendor-neutral, because
+# the same failure reads differently from OpenAI, Anthropic and Gemini.
+_ERROR_PATTERNS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (
+        ("insufficient_quota", "exceeded your current quota", "billing", "credit balance"),
+        "This API key has no remaining quota — add credit, or use a key from another "
+        "provider.",
+    ),
+    (
+        ("rate limit", "rate_limit", "429", "resource_exhausted"),
+        "The provider rate-limited the request. Wait a few seconds and ask again.",
+    ),
+    (
+        ("model_not_found", "does not exist", "not_found_error", "permission_denied"),
+        "This key does not have access to the selected model. Pick a different model "
+        "in the sidebar.",
+    ),
+    (
+        ("authentication", "invalid_api_key", "invalid x-api-key", "api key not valid",
+         "unauthenticated", "401"),
+        "That API key was rejected. Check it and try again.",
+    ),
+    (
+        ("timeout", "timed out"),
+        "The provider took too long to answer. Try again, or pick a faster model.",
+    ),
+)
+
+
+def humanise_error(exc: Exception) -> str:
     """Turn provider exceptions into something a user can act on."""
     text = str(exc)
     lowered = text.lower()
-    if "authentication" in lowered or "invalid_api_key" in lowered or "401" in lowered:
-        return "That OpenAI API key was rejected. Check it and try again."
-    if "insufficient_quota" in lowered or "exceeded your current quota" in lowered:
-        return "This OpenAI key has no remaining quota — add credit or use another key."
-    if "rate limit" in lowered or "429" in lowered:
-        return "OpenAI rate-limited the request. Wait a few seconds and ask again."
-    if "model_not_found" in lowered or "does not exist" in lowered:
-        return (
-            "This OpenAI key does not have access to the selected model. "
-            "Pick a different one in the sidebar."
-        )
+    for needles, advice in _ERROR_PATTERNS:
+        if any(needle in lowered for needle in needles):
+            return advice
     return f"The agent could not complete that turn: {text}"

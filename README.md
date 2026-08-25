@@ -9,6 +9,9 @@ Every claim in an answer comes from a tool call. The agent is instructed to say 
 not know rather than fill a gap from the model's own priors, because a confident guess
 about a real street corner is worse than no answer at all.
 
+Bring your own key from **OpenAI, Anthropic (Claude), or Google (Gemini)** — the app
+identifies the provider from the key itself.
+
 ```
 ┌─ Streamlit UI ──────────────────────────────────────────────┐
 │  chat + streaming tool trace          │  pydeck map         │
@@ -29,8 +32,8 @@ about a real street corner is worse than no answer at all.
 
 ## Quickstart
 
-You need a [HERE API key](https://platform.here.com/) (free tier is generous) and an
-[OpenAI API key](https://platform.openai.com/api-keys).
+You need a [HERE API key](https://platform.here.com/) (the free tier is generous) and a
+key from any one model provider.
 
 ```bash
 git clone https://github.com/ajay1808/GeoExplorer-Tech16-Project.git
@@ -41,8 +44,26 @@ cp .env.example .env      # then fill in HERE_API_KEY
 streamlit run app.py
 ```
 
-The OpenAI key can go in `.env` too, or be pasted into the sidebar at runtime — it is
-held for the session only and never written to disk.
+That is the whole setup. Paste a model key into the sidebar and the app works out who
+issued it — you are never asked to pick a vendor before pasting. Keys entered this way
+live for the session only and are never written to disk.
+
+### Model providers
+
+| Provider | Get a key | Key looks like | Models offered |
+| --- | --- | --- | --- |
+| OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | `sk-…` | `gpt-5.4-mini`, `gpt-5.4`, `gpt-5.1`, `gpt-4.1-mini` |
+| Anthropic (Claude) | [console.anthropic.com](https://console.anthropic.com/settings/keys) | `sk-ant-…` | `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5` |
+| Google (Gemini) | [aistudio.google.com](https://aistudio.google.com/apikey) | `AIza…` | `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-2.5-flash` |
+
+To skip the sidebar, put a key in `.env` (or Streamlit secrets) under any of
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY` / `CLAUDE_API_KEY`, or `GOOGLE_API_KEY` /
+`GEMINI_API_KEY`. Whichever is present gets used; set several and a provider picker
+appears, with `GEOEXPLORER_MODEL` deciding the default.
+
+Only function calling is required of a provider, so the system prompt, the tools and
+the agent loop are identical across all three — `providers.py` is the only module that
+knows any vendor-specific detail.
 
 ## What the agent can do
 
@@ -95,10 +116,15 @@ them through pydantic models and sends a handful of named fields per place.
 agents; v2 uses `FunctionAgent`, which supports native tool calling, event streaming
 and durable context.
 
+**One vendor is no longer assumed.** v1 hardcoded `gpt-4o-mini` and set
+`os.environ["OPENAI_API_KEY"]` as a global side effect. v2 passes credentials
+explicitly and treats the provider as a runtime choice across OpenAI, Anthropic and
+Google.
+
 ## Development
 
 ```bash
-pytest              # 91 tests, 98% coverage, no network and no API keys required
+pytest              # 120 tests, 98% coverage, no network and no API keys required
 ruff check .
 mypy                # strict
 ```
@@ -114,21 +140,22 @@ Every HERE call in the suite is served by an in-process `httpx.MockTransport`.
 | `src/geoexplorer/models.py` | Pydantic models and the compact tool payloads |
 | `src/geoexplorer/tools.py` | Tool definitions and their model-facing docstrings |
 | `src/geoexplorer/agent.py` | Agent construction, streaming bridge, error humanising |
+| `src/geoexplorer/providers.py` | Provider registry, key detection, LLM construction |
 | `src/geoexplorer/state.py` | Thread-safe per-conversation state |
 | `src/geoexplorer/ui/map.py` | pydeck rendering |
 
 ## Deployment
 
 **Streamlit Community Cloud** — point it at `app.py`. It reads `requirements.txt`, and
-injects secrets only through `st.secrets`, so add `HERE_API_KEY` under *Settings →
-Secrets*. `load_streamlit_secrets_into_env()` bridges those into the environment, and
+injects secrets only through `st.secrets`, so add `HERE_API_KEY` — and optionally a
+model key — under *Settings → Secrets*. `load_streamlit_secrets_into_env()` bridges those into the environment, and
 also accepts the old `HERE_API` name so existing deployments keep working.
 
 **Docker**
 
 ```bash
 docker build -t geoexplorer .
-docker run -p 8501:8501 -e HERE_API_KEY=... -e OPENAI_API_KEY=... geoexplorer
+docker run -p 8501:8501 -e HERE_API_KEY=... -e ANTHROPIC_API_KEY=... geoexplorer
 ```
 
 ## Known limits
@@ -143,3 +170,6 @@ docker run -p 8501:8501 -e HERE_API_KEY=... -e OPENAI_API_KEY=... geoexplorer
   design — mixing anchors mid-conversation makes answers hard to attribute.
 * **HERE coverage varies by country.** An empty result means HERE has no record there,
   not that nothing exists; the agent is instructed to say so.
+* **Gemini validates its key at construction.** Unlike the other two, the Google client
+  calls the API when it is built, so a bad Gemini key fails when the session starts
+  rather than on the first message. The error is reported either way.

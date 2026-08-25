@@ -10,11 +10,12 @@ from geoexplorer.agent import (
     MAX_TOOL_ITERATIONS,
     AgentSession,
     StreamEvent,
-    _humanise_error,
     _summarise_tool_output,
     build_session,
+    humanise_error,
 )
 from geoexplorer.models import GeocodeResult
+from geoexplorer.providers import PROVIDERS
 
 
 @pytest.fixture
@@ -25,8 +26,9 @@ def geocode() -> GeocodeResult:
 def test_session_builds_with_every_tool_registered(client_factory, geocode):
     session = build_session(
         here_client=client_factory({}),
-        openai_api_key="sk-test",
-        model="gpt-4o-mini",
+        provider=PROVIDERS["openai"],
+        api_key="sk-test",
+        model="gpt-4.1-mini",
         geocode=geocode,
     )
 
@@ -38,8 +40,9 @@ def test_session_builds_with_every_tool_registered(client_factory, geocode):
 def test_session_anchors_the_map_on_the_resolved_address(client_factory, geocode):
     session = build_session(
         here_client=client_factory({}),
-        openai_api_key="sk-test",
-        model="gpt-4o-mini",
+        provider=PROVIDERS["openai"],
+        api_key="sk-test",
+        model="gpt-4.1-mini",
         geocode=geocode,
     )
     snapshot = session.map_snapshot()
@@ -56,8 +59,9 @@ def test_memory_and_context_persist_across_turns(client_factory, geocode):
     """
     session = build_session(
         here_client=client_factory({}),
-        openai_api_key="sk-test",
-        model="gpt-4o-mini",
+        provider=PROVIDERS["openai"],
+        api_key="sk-test",
+        model="gpt-4.1-mini",
         geocode=geocode,
     )
     first_context, first_memory = session.context, session.memory
@@ -71,8 +75,9 @@ def test_memory_and_context_persist_across_turns(client_factory, geocode):
 def test_streaming_surfaces_errors_instead_of_crashing(client_factory, geocode, monkeypatch):
     session = build_session(
         here_client=client_factory({}),
-        openai_api_key="sk-test",
-        model="gpt-4o-mini",
+        provider=PROVIDERS["openai"],
+        api_key="sk-test",
+        model="gpt-4.1-mini",
         geocode=geocode,
     )
 
@@ -102,11 +107,11 @@ def test_tool_iteration_cap_is_set():
     ],
 )
 def test_provider_errors_become_actionable_advice(message, expected):
-    assert expected in _humanise_error(RuntimeError(message))
+    assert expected in humanise_error(RuntimeError(message))
 
 
 def test_unknown_errors_are_passed_through_not_swallowed():
-    assert "something odd" in _humanise_error(RuntimeError("something odd"))
+    assert "something odd" in humanise_error(RuntimeError("something odd"))
 
 
 def test_tool_output_summary_keeps_traces_small():
@@ -151,8 +156,9 @@ class FakeHandler:
 def _session(client_factory, geocode):
     return build_session(
         here_client=client_factory({}),
-        openai_api_key="sk-test",
-        model="gpt-4o-mini",
+        provider=PROVIDERS["openai"],
+        api_key="sk-test",
+        model="gpt-4.1-mini",
         geocode=geocode,
     )
 
@@ -225,3 +231,49 @@ def test_stream_joins_its_worker_thread(client_factory, geocode, monkeypatch):
     list(session.stream("hello"))
 
     assert threading.active_count() <= before
+
+
+# --- provider independence ----------------------------------------------------------
+
+
+@pytest.mark.parametrize("provider_id", ["openai", "anthropic"])
+def test_a_session_can_be_built_on_any_provider(client_factory, geocode, provider_id):
+    """Nothing below the LLM construction differs between vendors — assert that.
+
+    Gemini is excluded here only because its client validates the key over the network
+    at construction time; `test_providers.py` covers its function-calling contract.
+    """
+    provider = PROVIDERS[provider_id]
+    session = build_session(
+        here_client=client_factory({}),
+        provider=provider,
+        api_key="test-key",
+        model=provider.default_model,
+        geocode=geocode,
+    )
+
+    assert session.provider.id == provider_id
+    assert session.model == provider.default_model
+    assert len(session.agent.tools) == 7
+    assert session.map_snapshot().anchor.label.startswith("350 5th Ave")
+
+
+def test_the_agent_prompt_and_tools_do_not_vary_by_provider(client_factory, geocode):
+    sessions = [
+        build_session(
+            here_client=client_factory({}),
+            provider=PROVIDERS[pid],
+            api_key="test-key",
+            model=PROVIDERS[pid].default_model,
+            geocode=geocode,
+        )
+        for pid in ("openai", "anthropic")
+    ]
+
+    prompts = {str(s.agent.system_prompt) for s in sessions}
+    tool_names = {
+        tuple(sorted(t.metadata.name for t in s.agent.tools)) for s in sessions
+    }
+
+    assert len(prompts) == 1
+    assert len(tool_names) == 1
