@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Type-check
+        run: mypy
+
+      - name: Test
+        # The suite mocks every HERE call, so CI needs no secrets.
+        run: pytest --cov=geoexplorer --cov-report=term-missing
+
+  smoke:
+    # Catches import-time breakage in the Streamlit entry point, which the unit
+    # tests do not exercise.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: Import the app module
+        run: python -c "import sys; sys.path.insert(0, 'src'); import app; print('app imports cleanly')"
