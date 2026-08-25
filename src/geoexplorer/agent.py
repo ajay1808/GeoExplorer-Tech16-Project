@@ -59,6 +59,9 @@ worse than admitting you do not know.
 * If a search comes back empty, say so plainly. An empty result means HERE has no record \
 within that radius, which is not the same as "nothing exists there" — widen the radius or \
 rephrase once before concluding.
+* If a tool returns an `error` field, do not keep calling it with variations. Retry at most \
+once, then tell the user which lookup failed and what you could not determine. Repeatedly \
+rewording a failing request wastes the user's time and does not fix a broken upstream.
 * Prefer profile_neighbourhood for open-ended "what is it like here" questions, \
 find_by_category for common amenities, and find_nearby for specific or unusual ones.
 * For "how far" or "how long to get to" questions use travel_time_to. Never estimate \

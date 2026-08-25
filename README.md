@@ -53,7 +53,7 @@ live for the session only and are never written to disk.
 | Provider | Get a key | Key looks like | Models offered |
 | --- | --- | --- | --- |
 | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | `sk-…` | `gpt-5.4-mini`, `gpt-5.4`, `gpt-5.1`, `gpt-4.1-mini` |
-| Anthropic (Claude) | [console.anthropic.com](https://console.anthropic.com/settings/keys) | `sk-ant-…` | `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5` |
+| Anthropic (Claude) | [console.anthropic.com](https://console.anthropic.com/settings/keys) | `sk-ant-…` | `claude-sonnet-5`, `claude-opus-5`, `claude-haiku-4-5` |
 | Google (Gemini) | [aistudio.google.com](https://aistudio.google.com/apikey) | `AIza…` | `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-2.5-flash` |
 
 To skip the sidebar, put a key in `.env` (or Streamlit secrets) under any of
